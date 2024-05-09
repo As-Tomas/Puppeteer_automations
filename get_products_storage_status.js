@@ -2,7 +2,7 @@ const fs = require("fs");
 const parse = require("csv-parse").parse;
 const puppeteer = require("puppeteer");
 const stringify = require("csv-stringify").stringify;
-const path = require('path');
+const path = require("path");
 
 const secrets = require("./secrets");
 const filePath = secrets.filePath;
@@ -41,7 +41,10 @@ async function processSKUs(page, products) {
   for (const product of products) {
     const { SKU } = product;
 
-    
+    // If SKU contains anything other than numbers, skip this product
+    if (!/^\d+$/.test(SKU)) {
+      continue;
+    }
 
     if (/^\d+$/.test(SKU)) {
       await page.type('input[name="q"]', SKU, { delay: 100 });
@@ -54,39 +57,42 @@ async function processSKUs(page, products) {
         const skuLinkSelector = `a[href*="${SKU}"][data-scope-link="true"]`;
         await page.waitForSelector(skuLinkSelector, {
           timeout: 5000,
-        }); 
-        
+        });
+
         // Evaluate the page for availability or other relevant details
         const availabilityInfo = await page.evaluate((selector) => {
           const linkElement = document.querySelector(selector);
-          const parentElement = linkElement.closest('section'); // adjust this to step back to a common ancestor if needed
+          const parentElement = linkElement.closest("section"); // adjust this to step back to a common ancestor if needed
           return parentElement ? parentElement.innerText : "Not found";
         }, skuLinkSelector);
 
-        
         // Parse the availability or other data from the innerText
         if (availabilityInfo.includes("Nettlager")) {
-          const match = availabilityInfo.match(/Nettlager \((\d+\+)\)/);
+          const match = availabilityInfo.match(/Nettlager \((\d+\+|\d+-\d+)\)/);
           product["Availability"] = match ? match[1] : "Limited stock";
         } else if (availabilityInfo.includes("Ingen treff på")) {
-          product["Availability"] = "Not found";
+          product["Availability"] = "Ingen treff på";
         } else if (availabilityInfo.includes("Bestillingsvare")) {
           product["Availability"] = "Bestillingsvare";
         } else if (availabilityInfo.includes("Forventet på lager")) {
-            product["Availability"] = "On delivery";
+          product["Availability"] = "Forventet på lager";
         } else if (availabilityInfo.includes("Noe gikk galt")) {
-            product["Availability"] = "0";
+          product["Availability"] = "Noe gikk galt";
         } else {
           product["Availability"] = "Not found";
         }
-        console.log('product["Availability"] ', SKU, ' ', product["Availability"]);
-
+        console.log(
+          'product["Availability"] ',
+          SKU,
+          " ",
+          product["Availability"]
+        );
       } catch (error) {
         console.log("error", error);
         console.log("No AJAX response or timeout reached for SKU:", SKU);
         product["Availability"] = "Not found";
-       // continue; // Skip to the next product if no relevant response is found
-      }     
+        // continue; // Skip to the next product if no relevant response is found
+      }
 
       // console.log('responseText', responseText)
       // // Interpret AJAX response
@@ -114,18 +120,22 @@ async function processSKUs(page, products) {
 }
 
 async function saveUpdatedCSV(updatedProducts) {
-  stringify(updatedProducts, {
-    header: true,
-    columns: Object.keys(updatedProducts[0]),
-  }, (err, csvString) => {
-    if (err) {
+  stringify(
+    updatedProducts,
+    {
+      header: true,
+      columns: Object.keys(updatedProducts[0]),
+    },
+    (err, csvString) => {
+      if (err) {
         throw err;
+      }
+      const dir = path.dirname(filePath);
+      const filename = path.basename(filePath);
+      const newFilePath = path.join(dir, "UPDATED_Storage_" + filename);
+      fs.writeFileSync(newFilePath, csvString);
     }
-    const dir = path.dirname(filePath);
-    const filename = path.basename(filePath);
-    const newFilePath = path.join(dir, 'UPDATED_Storage_' + filename);
-    fs.writeFileSync(newFilePath, csvString);
-  });
+  );
 }
 
 (async () => {

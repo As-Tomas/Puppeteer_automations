@@ -3,7 +3,7 @@ Test each product storage status from products csv file by doing search by produ
 2. Set Up Puppeteer and Open the Website: We'll launch Puppeteer, navigate to the website, and ensure it's fully loaded.
 3. Validate Search Form: Check if the correct search form exists.
 4. SKU Processing:
-    Validate the SKU format.
+    Validate the SKU format. If SKU contains anything other than numbers, skip this product
     Input the SKU in the search form.
     Fetch and interpret the AJAX response.
 5. Store SKU Status:
