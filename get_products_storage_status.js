@@ -123,6 +123,7 @@ async function saveUpdatedCSV(updatedProducts) {
       const filename = path.basename(filePath);
       const newFilePath = path.join(dir, "UPDATED_Storage_" + filename);
       fs.writeFileSync(newFilePath, csvString);
+      console.log("Updated CSV file saved to:", newFilePath);
     }
   );
 }
@@ -133,7 +134,7 @@ async function saveUpdatedCSV(updatedProducts) {
     const { page, browser } = await setupBrowser();
     const updatedProducts = await processSKUs(page, records);
     await saveUpdatedCSV(updatedProducts);
-    // await browser.close();
+    await browser.close();
   } catch (error) {
     console.error("An error occurred:", error);
   }
