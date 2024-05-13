@@ -50,6 +50,7 @@ async function processSKUs(page, products) {
 
     // If SKU contains anything other than numbers, skip this product
     if (!/^\d+$/.test(SKU)) {
+      product["Availability"] = "";
       continue;
     }
 
@@ -92,8 +93,10 @@ async function processSKUs(page, products) {
             product["Availability"] = "Forventet på lager";
           } else if (availabilityInfo.includes("Noe gikk galt")) {
             product["Availability"] = "Noe gikk galt";
+          } else if (availabilityInfo.includes("Ubekreftet")) {
+            product["Availability"] = "Ubekreftet";
           } else {
-            product["Availability"] = "Not found";
+            product["Availability"] = ""; //Not found
           }          
         }
       } catch (error) {
@@ -104,6 +107,10 @@ async function processSKUs(page, products) {
       }      
     }
     console.log( count, ' of ', totalProducts, ' product["Availability"] ', SKU, " ", product["Availability"]);
+    // for testing limit the number of products
+    // if (count ===135) {
+    //   break;
+    // }
   }
   return products;
 }
